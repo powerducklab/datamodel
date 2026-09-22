@@ -1,0 +1,254 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Ecommerce API",
+    "version": "1.0.0",
+    "description": "Sample catalog and ordering API used by the @powerduck/datamodel demo."
+  },
+  "paths": {
+    "/categories": {
+      "get": {
+        "summary": "List categories",
+        "responses": {
+          "200": {
+            "description": "A page of categories.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Category" }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a category",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Category" } }
+          }
+        },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List products",
+        "responses": {
+          "200": {
+            "description": "A page of products.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Product" }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a product",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Product" } }
+          }
+        },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "List customers",
+        "responses": {
+          "200": {
+            "description": "A page of customers.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Customer" }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a customer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Customer" } }
+          }
+        },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "summary": "Get a customer",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "A customer.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Customer" } }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "List orders",
+        "responses": {
+          "200": {
+            "description": "A page of orders.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Order" }
+                    },
+                    "total": { "type": "integer" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create an order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/Order" } }
+          }
+        },
+        "responses": { "201": { "description": "Created." } }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Get an order",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "An order.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Order" } }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}/items": {
+      "get": {
+        "summary": "List order items",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer", "format": "int64" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "The line items of an order.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/OrderItem" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string", "maxLength": 100 }
+        },
+        "required": ["name"]
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "category": { "$ref": "#/components/schemas/Category" },
+          "name": { "type": "string", "maxLength": 200 },
+          "price": { "type": "number", "format": "decimal" },
+          "stock": { "type": "integer", "format": "int32" }
+        },
+        "required": ["category", "name", "price"]
+      },
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "name": { "type": "string", "maxLength": 100 },
+          "email": { "type": "string", "format": "email" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["name", "email"]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "customer": { "$ref": "#/components/schemas/Customer" },
+          "status": { "type": "string", "enum": ["pending", "paid", "shipped", "cancelled"] },
+          "total": { "type": "number", "format": "decimal" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["customer", "status", "total"]
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer", "format": "int64" },
+          "order": { "$ref": "#/components/schemas/Order" },
+          "product": { "$ref": "#/components/schemas/Product" },
+          "quantity": { "type": "integer", "format": "int32" },
+          "unit_price": { "type": "number", "format": "decimal" }
+        },
+        "required": ["order", "product", "quantity", "unit_price"]
+      }
+    }
+  }
+}

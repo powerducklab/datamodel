@@ -1,0 +1,66 @@
+{
+  "name": "@powerduck/datamodel",
+  "version": "0.1.0",
+  "description": "Browser-safe relational modeling core for OpenAPI: extract entities and foreign keys from an OpenAPI document, generate dialect-aware DDL/indexes/seed SQL, diff a model against a live database, reverse-engineer component schemas, and build a versioned, AI-ready ER reconciliation artifact (JSON + Markdown/Mermaid). Pure functions only; no React, DOM, filesystem or runtime dependencies.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc --noEmit && tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "demo": "tsx demo/demo.ts",
+    "check:dual": "node scripts/dual-check.mjs",
+    "prepublishOnly": "npm run build && npm run test && npm run check:dual"
+  },
+  "keywords": [
+    "openapi",
+    "data-model",
+    "entity-relationship",
+    "er-diagram",
+    "ddl",
+    "schema-diff",
+    "database",
+    "mysql",
+    "sqlserver",
+    "oracle",
+    "foreign-key",
+    "migration",
+    "mermaid",
+    "ai-context",
+    "mcp"
+  ],
+  "author": "POWERDUCK LIMITED",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/powerducklab/datamodel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/powerducklab/datamodel/issues"
+  },
+  "homepage": "https://www.powerduck.com/",
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "terser": "^5.51.2",
+    "tsup": "^8.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
