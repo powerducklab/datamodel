@@ -67,6 +67,8 @@ export interface ReconciliationTable {
   logicalName?: string;
   entityId?: string;
   source?: ModelEntity["source"];
+  /** Composite primary-key columns for associative/link tables. */
+  compositePrimaryKey?: string[];
   status: GraphNodeStatus;
   confidence: RelationshipConfidence;
   modeled: boolean;
@@ -112,6 +114,7 @@ export interface OpenQuestion {
     | "no_live_database"
     | "cyclic_foreign_key_skipped"
     | "relationship_not_enforced"
+    | "junction_table_inferred"
     | "table_not_in_model";
   severity: OpenQuestionSeverity;
   table?: string;
@@ -308,8 +311,11 @@ export function buildReconciliation(
       logicalName: entity.name,
       entityId: entity.id,
       source: entity.source,
+      ...(entity.compositePrimaryKey?.length
+        ? { compositePrimaryKey: entity.compositePrimaryKey }
+        : {}),
       status,
-      confidence: "high",
+      confidence: entity.source === "junction" ? "medium" : "high",
       modeled: true,
       live: node?.live ?? false,
       columns: buildColumnPairs(node ?? {
@@ -352,11 +358,14 @@ export function buildReconciliation(
       .filter((step): step is number => typeof step === "number");
     order += 1;
     createStepByEntityId.set(entity.id, order);
+    const description = entity.junction
+      ? `Create link table ${physical} joining ${entity.junction.leftTable} and ${entity.junction.rightTable}, derived from many-to-many array references.`
+      : `Create table ${physical} (modeled as ${entity.name}).`;
     migrationPlan.push({
       order,
       kind: "create_table",
       target: physical,
-      description: `Create table ${physical} (modeled as ${entity.name}).`,
+      description,
       sql: buildAlterScript(dialectId, entity, undefined, entities, options.overrides),
       blockedBy,
       requiresReview: false,
@@ -412,9 +421,21 @@ export function buildReconciliation(
     });
   }
 
-  const ddl = buildAllDdl(dialectId, entities, { ifNotExists: true, overrides: options.overrides });
-  for (const skipped of ddl.skippedForeignKeys) {
+  for (const entity of entities) {
+    const meta = entity.junction;
+    if (!meta) continue;
     openQuestions.push({
+      code: "junction_table_inferred",
+      severity: "info",
+      table: meta.table,
+      message: `Link table ${meta.table} between ${meta.leftTable} and ${meta.rightTable} was derived from many-to-many array reference(s) ${meta.derivedFrom.join(
+        ", ",
+      )}. It uses a composite primary key and two foreign keys; confirm the table name and, if a pair can repeat, model an explicit associative schema with a payload instead.`,
+    });
+  }
+
+  const ddl = buildAllDdl(dialectId, entities, { ifNotExists: true, overrides: options.overrides });
+  for (const skipped of ddl.skippedForeignKeys) {    openQuestions.push({
       code: "cyclic_foreign_key_skipped",
       severity: "warning",
       message: `Foreign-key edge ${skipped} would create a dependency cycle, so the constraint was omitted from generated DDL while the column was kept. Define the constraint manually after table creation if needed.`,

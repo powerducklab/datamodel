@@ -30,7 +30,7 @@ export function snakeCase(input: string): string {
     .replace(/^_+|_+$/g, "");
 }
 
-function pascalCase(input: string): string {
+export function pascalCase(input: string): string {
   return input
     .split(/[^a-zA-Z0-9]+/)
     .filter(Boolean)

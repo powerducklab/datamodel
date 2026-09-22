@@ -75,7 +75,12 @@ function createTableStatement(
   const lines = entity.columns.map((column) => `  ${columnDefinition(dialect, column)}`);
 
   const pk = primaryKeyColumn(entity);
-  if (pk && !(pk.jsonType === "integer" && !pk.refEntityId)) {
+  if (entity.compositePrimaryKey?.length) {
+    const composite = entity.compositePrimaryKey
+      .map((column) => dialect.quoteIdent(column))
+      .join(", ");
+    lines.push(`  PRIMARY KEY (${composite})`);
+  } else if (pk && !(pk.jsonType === "integer" && !pk.refEntityId)) {
     lines.push(`  PRIMARY KEY (${dialect.quoteIdent(pk.columnName)})`);
   }
 

@@ -115,6 +115,7 @@ function diagramRows(
   table: ReconciliationTable | undefined,
   orphan: LiveColumn[] | undefined,
   fkSet: Set<string> | undefined,
+  compositePk?: Set<string>,
 ): string[] {
   const lines: string[] = [];
   const columns: Array<{ name: string; type: string; pk: boolean; fk: boolean }> = [];
@@ -124,7 +125,10 @@ function diagramRows(
       const type = pair.modeled
         ? mermaidTypeFromModel(pair.modeled.jsonType, pair.modeled.format)
         : mermaidTypeFromLive(pair.live?.dataType);
-      const pk = pair.modeled?.primaryKey || pair.live?.primaryKey === true;
+      const pk =
+        pair.modeled?.primaryKey === true ||
+        compositePk?.has(pair.name.toLowerCase()) === true ||
+        pair.live?.primaryKey === true;
       const fk = fkSet?.has(pair.name.toLowerCase()) === true;
       columns.push({ name: pair.name, type, pk, fk });
     }
@@ -179,8 +183,19 @@ export function buildMermaidErDiagram(
   for (const table of shownTables) {
     const alias = aliases.get(table.table);
     if (!alias) continue;
+    const compositePk = new Set(
+      (table.compositePrimaryKey ?? []).map((column) => column.toLowerCase()),
+    );
     blocks.push(`  ${alias} {`);
-    blocks.push(...diagramRows(table.table, table, undefined, fkByTable.get(tableKey(table.table))));
+    blocks.push(
+      ...diagramRows(
+        table.table,
+        table,
+        undefined,
+        fkByTable.get(tableKey(table.table)),
+        compositePk,
+      ),
+    );
     blocks.push("  }");
   }
   for (const orphan of shownOrphans) {

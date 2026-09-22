@@ -15,7 +15,7 @@ export interface IndexSpec {
   columns: string[];
   unique: boolean;
   /** Why the index was emitted, used by tests and the UI. */
-  reason: "foreign-key" | "unique" | "email";
+  reason: "foreign-key" | "unique" | "email" | "junction";
 }
 
 const MAX_IDENTIFIER_LENGTH = 60;
@@ -63,6 +63,21 @@ export function indexesForEntity(
       columns: [column.columnName],
       unique,
       reason: kind,
+    });
+  }
+
+  for (const composite of entity.compositeIndexes ?? []) {
+    const prefix = composite.unique ? "uq" : "idx";
+    const generated = `${prefix}_${table}_${composite.columns.join("_")}`.slice(
+      0,
+      MAX_IDENTIFIER_LENGTH,
+    );
+    indexes.push({
+      table,
+      name: composite.name ?? sanitizeIdentifier(generated),
+      columns: composite.columns,
+      unique: composite.unique,
+      reason: composite.reason,
     });
   }
   return indexes;

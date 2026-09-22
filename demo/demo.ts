@@ -51,6 +51,10 @@ function run(): void {
   console.log(`Matched:             ${summary.matched}`);
   console.log(`Live-only (extra):   ${summary.extra}`);
   console.log(`Migration steps:     ${report.migrationPlan.length}`);
+  const linkTables = report.tables
+    .filter((table) => table.source === "junction")
+    .map((table) => table.table);
+  console.log(`Derived link tables: ${linkTables.length ? linkTables.join(", ") : "(none)"}`);
   console.log(`Open questions:      ${report.openQuestions.length}`);
   console.log("");
   console.log(`JSON:     ${jsonPath}`);

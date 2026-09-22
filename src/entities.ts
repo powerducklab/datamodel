@@ -1,5 +1,6 @@
 import type { JsonCoreType, ModelColumn, ModelEntity } from "./types";
 import { operationEntityName, snakeCase, tableNameFor } from "./naming";
+import { augmentWithJunctions } from "./junctions";
 
 /**
  * Extract relational entities from an OpenAPI document.
@@ -336,5 +337,5 @@ export function extractEntities(doc: unknown): ModelEntity[] {
     }
   }
 
-  return entities;
+  return augmentWithJunctions(doc, entities);
 }

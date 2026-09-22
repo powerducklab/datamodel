@@ -135,14 +135,18 @@ export function buildInsertStatements(
   const requested = Number.isFinite(count) ? Math.trunc(count) : 5;
   const rows = Math.max(1, Math.min(20, requested));
   const { order } = topoOrderEntities(entities);
+  // Derived many-to-many link tables are skipped: their rows must pair real
+  // parent keys, and deterministic random pairs would collide on the composite
+  // primary key. Explicit associative schemas (source "schema") still seed.
+  const insertable = order.filter((entity) => entity.source !== "junction");
   const statements: string[] = [];
-  for (const entity of order) {
+  for (const entity of insertable) {
     const table = resolveTableName(entity, overrides);
     statements.push(...insertStatement(dialect, entity, table, rows));
   }
   return {
     statements,
     sql: statements.join("\n"),
-    rowCount: order.length * rows,
+    rowCount: insertable.length * rows,
   };
 }

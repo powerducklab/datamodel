@@ -37,6 +37,7 @@ export * from "./types";
 export * from "./naming";
 export * from "./dialects";
 export * from "./entities";
+export * from "./junctions";
 export * from "./ddl";
 export * from "./indexes";
 export * from "./inserts";

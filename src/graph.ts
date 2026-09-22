@@ -209,7 +209,10 @@ export function buildGraph(
           toTable,
           toColumn,
           origin: "model",
-          confidence: "high",
+          // Edges inside a link table derived from an array-of-$ref are an
+          // explicit reference under a conventional join-table shape; they are
+          // surfaced as medium confidence for the user to confirm.
+          confidence: entity.source === "junction" ? "medium" : "high",
           enforced: false,
           childEntityId: entity.id,
         },

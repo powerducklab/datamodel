@@ -13,11 +13,12 @@ Given an OpenAPI 3.x document, this library:
 
 1. **Extracts relational entities** from component schemas and inline request/response bodies, resolving `$ref`, `allOf`, `oneOf`/`anyOf`, and pagination envelopes.
 2. **Infers foreign keys deterministically** from object properties whose value is a component `$ref`.
-3. **Generates DDL, indexes, deterministic seed data, and deployment scripts** for MySQL, SQL Server, and Oracle.
-4. **Diffs a model against a live database** (read-only introspection input) and emits **additive-only** `CREATE`/`ALTER` SQL.
-5. **Builds a unified ER graph** that merges modeled relationships with real, enforced foreign keys, classifying every table as `matched`, `drift`, `missing`, or `extra`.
-6. **Builds a reverse impact index** mapping each schema/table to every API operation that references it (including nested, transitive references).
-7. **Produces a single versioned reconciliation artifact** (`buildReconciliation`) consumable by both humans and AI, exportable as canonical JSON or Markdown with an embedded Mermaid `erDiagram`.
+3. **Derives many-to-many link tables** from plural array-of-`$ref` properties (e.g. `User.products: Product[]`) and constrains explicit associative (join) schemas with composite primary/unique keys.
+4. **Generates DDL, indexes, deterministic seed data, and deployment scripts** for MySQL, SQL Server, and Oracle.
+5. **Diffs a model against a live database** (read-only introspection input) and emits **additive-only** `CREATE`/`ALTER` SQL.
+6. **Builds a unified ER graph** that merges modeled relationships with real, enforced foreign keys, classifying every table as `matched`, `drift`, `missing`, or `extra`.
+7. **Builds a reverse impact index** mapping each schema/table to every API operation that references it (including nested, transitive references).
+8. **Produces a single versioned reconciliation artifact** (`buildReconciliation`) consumable by both humans and AI, exportable as canonical JSON or Markdown with an embedded Mermaid `erDiagram`.
 
 It generates SQL and plans **but never executes anything** — there is no database driver in this package.
 
@@ -219,11 +220,11 @@ const plan = planComponentPatch(doc, "Order", schema); // non-destructive JSON P
 
 - `source` — spec metadata (title, version, digest, operation count) and connected-database metadata.
 - `summary` — entity/table/relationship counts, status totals, enforced vs. unenforced relationships.
-- `tables[]` — per-table status, modeled/live column pairs, relationships, diffs, impacted operations, and proposed additive SQL.
+- `tables[]` — per-table status, modeled/live column pairs, composite primary key (associative tables), relationships, diffs, impacted operations, and proposed additive SQL.
 - `orphanTables[]` — live tables with no model entity.
 - `relationships[]` — every edge with origin, confidence, and enforcement state.
 - `migrationPlan[]` — ordered `create_table` / `alter_table` / `review_orphan_table` steps with `blockedBy` and `requiresReview`.
-- `openQuestions[]` — machine-readable items such as `no_live_database`, `relationship_not_enforced`, `cyclic_foreign_key_skipped`, `table_not_in_model`.
+- `openQuestions[]` — machine-readable items such as `no_live_database`, `relationship_not_enforced`, `junction_table_inferred`, `cyclic_foreign_key_skipped`, `table_not_in_model`.
 - `safeguards[]` — fixed guarantees printed with every report.
 
 **Fact layers are kept separate**: what was observed live, what the spec models, what is proposed as SQL, and what was inferred. Proposed SQL is always additive (`CREATE TABLE IF NOT EXISTS`, `ADD`/`MODIFY COLUMN`); destructive `DROP`/`DELETE` statements are never generated, and nothing is executed.
@@ -250,6 +251,48 @@ Order:
 
 The column name is the snake-cased property name, and nullability follows whether the property is `required`. A hand-written integer field such as `customer_id: { type: integer }` is **not** treated as a foreign key, because there is no referential evidence — naming is never guessed. Cyclic dependencies keep their columns but skip the cyclic constraint (reported in `skippedForeignKeys` / an open question).
 
+## Many-to-many relationships and link tables
+
+A join table is emitted only from an **explicit, high-confidence signal** — the engine never invents a relationship between two unrelated schemas.
+
+**1. Plural array reference (a link table is synthesized).** A component schema declares a property that is an array of component references, and the property is literally the plural form of the target resource:
+
+```yaml
+User:
+  type: object
+  properties:
+    id: { type: integer, format: int64 }
+    name: { type: string }
+    products:
+      type: array
+      items: { $ref: "#/components/schemas/Product" }   # many-to-many
+```
+
+This produces a pure link table following the Rails `has_and_belongs_to_many` convention — the two plural table names sorted alphabetically and joined — with a composite primary key and one foreign key per parent. The example below is the actual generated MySQL:
+
+```sql
+CREATE TABLE IF NOT EXISTS `products_users` (
+  `product_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`product_id`, `user_id`),
+  CONSTRAINT `fk_products_users_product_id` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`),
+  CONSTRAINT `fk_products_users_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+);
+```
+
+The two directions of the same relationship (e.g. both `User.products` and `Product.users`) create a single table. The derived table appears as a normal node in the ER graph and as a `create_table` migration step whose `blockedBy` lists both parent steps. Each derived table is reported with `source: "junction"`, `confidence: "medium"`, and a `junction_table_inferred` open question that records the exact source properties (e.g. `schema:User#products`) so the inference is fully traceable.
+
+The following are intentionally **not** treated as many-to-many:
+
+- a child collection whose item schema references the parent back (a one-to-many, e.g. `Order.items: OrderItem[]` with `OrderItem.order`);
+- generic collection property names such as `items`, `records`, or `list` that do not name the target resource;
+- self-referential arrays (trees) and arrays of primitives;
+- two schemas with no array reference between them — no table is guessed.
+
+**2. Explicit associative schema (a composite key is added).** A component schema that is a pure link table — exactly two distinct foreign keys and no business payload — receives a composite primary key, or a composite unique index when it also keeps a surrogate `id`. An associative table that carries a payload (quantity, price, role, timestamps) is left to explicit modeling; each foreign key still receives its own single-column index.
+
+If a pair can legitimately repeat (history, multiple subscriptions), model an explicit associative schema with a payload instead of relying on the synthesized unique link table.
+
 ## API reference
 
 ### Core pipeline
@@ -265,7 +308,8 @@ The column name is the snake-cased property name, and nullability follows whethe
 
 | Export | Purpose |
 | --- | --- |
-| `extractEntities(doc)` | Entities + inferred FK columns from an OpenAPI document. |
+| `extractEntities(doc)` | Entities + inferred FK columns and derived link tables from an OpenAPI document. |
+| `augmentWithJunctions(doc, entities)` | Add derived many-to-many link entities and annotate explicit associative schemas (already applied by `extractEntities`). |
 | `buildGraph(entities, options?)` | Unified ER graph merging modeled and live evidence. |
 | `tableKey(name)` | Canonical case/schema/bracket-insensitive table key. |
 | `buildImpactIndex(doc)` | Schema → operations reverse index (transitive). |
@@ -283,9 +327,9 @@ The column name is the snake-cased property name, and nullability follows whethe
 | `columnTypesCompatible(dialect, column, liveType)` | Model vs. live type compatibility check. |
 | `diffEntityAgainstLive(dialect, entity, live?, overrides?)` | `missing` / `drift` / `matched` diff with items. |
 | `summarizeModelColumns(entity)` | Column summaries including FK markers. |
-| `buildIndexes(dialect, entity, entities)` / `indexesForEntity` | Index statements. |
+| `buildIndexes(dialect, entities, overrides?)` / `indexesForEntity(entity, overrides?)` | Single-column and composite index statements. |
 | `buildSampleData(entity, count?)` | Deterministic sample columns + rows for one entity. |
-| `buildInsertStatements(dialect, entity, sample, entities)` | Dialect-aware seed `INSERT`s. |
+| `buildInsertStatements(dialect, entities, count?, overrides?)` | Dialect-aware seed `INSERT`s (derived link tables skipped). |
 | `buildDeploymentScript(dialect, entities, options?)` | Tables + indexes + seed deployment script. |
 
 ### Reverse engineering & helpers
@@ -298,7 +342,7 @@ The column name is the snake-cased property name, and nullability follows whethe
 | `buildComponentPatch(name, schema, options?)` | JSON Patch to add/replace one component. |
 | `planComponentPatch(doc, name, schema)` | Non-destructive merge plan (empty `ops` when nothing is new). |
 | `ensureSchemasParentOps(doc)` / `uniqueComponentName(...)` | Patch scaffolding helpers. |
-| `snakeCase` / `pluralize` / `singularize` / `tableNameFor` / `operationEntityName` | Naming utilities. |
+| `snakeCase` / `pascalCase` / `pluralize` / `singularize` / `tableNameFor` / `operationEntityName` | Naming utilities. |
 | `DIALECTS` / `DIALECT_OPTIONS` | The three supported SQL dialects. |
 | `RECONCILIATION_SCHEMA_VERSION` / `MAX_MERMAID_TABLES` / `MAX_MERMAID_COLUMNS` | Constants. |
 
@@ -309,7 +353,7 @@ A runnable example reads `demo/fixtures/ecommerce.json` and writes both artifact
 ```bash
 npm install
 npm run demo     # -> demo/output/reconciliation.json + reconciliation.md
-npm test         # vitest, 77 tests
+npm test         # vitest, 90 tests
 npm run build    # tsc type-check + tsup (CJS/ESM/d.ts)
 npm run check:dual  # loads both builds and asserts identical, functional exports
 ```
@@ -319,7 +363,7 @@ npm run check:dual  # loads both builds and asserts identical, functional export
 - **Zero runtime dependencies** — nothing is installed at runtime; the library is fully browser-safe and executes no I/O.
 - **Deterministic** — pure functions, injectable clock, stable ordering for CI diffing.
 - **Additive and non-destructive** — plans never drop columns or tables and never run SQL.
-- **Evidence-based** — foreign keys come from explicit references, never from name guessing.
+- **Evidence-based** — foreign keys come from explicit references and link tables from explicit plural array references; nothing is inferred from a name alone, and unrelated schemas are never linked.
 - **Human and AI parity** — the graph, chat tools, and MCP/export artifacts are derived from the same functions.
 
 ## License

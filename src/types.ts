@@ -16,7 +16,40 @@ export type JsonCoreType =
   | "array"
   | "unknown";
 
-export type EntitySource = "schema" | "request" | "response";
+export type EntitySource = "schema" | "request" | "response" | "junction";
+
+/**
+ * A multi-column index that cannot be expressed by the per-column index rule.
+ * Used for the composite key of an associative (link/join) table.
+ */
+export interface CompositeIndexSpec {
+  /** Physical column names, in key order. */
+  columns: string[];
+  unique: boolean;
+  /** Optional explicit constraint/index name; generated when omitted. */
+  name?: string;
+  /** Why the index was emitted, used by tests and the UI. */
+  reason: "junction";
+}
+
+/**
+ * Provenance for a many-to-many link table that was deterministically derived
+ * from array-of-$ref properties in the OpenAPI document rather than written as
+ * an explicit component schema.
+ */
+export interface JunctionMeta {
+  /** Physical link table name. */
+  table: string;
+  /** First parent physical table name (naming order, see junctions.ts). */
+  leftTable: string;
+  /** Second parent physical table name. */
+  rightTable: string;
+  /**
+   * Document properties that imply the relationship, formatted as
+   * "schema:Entity#property", so the inference is fully traceable.
+   */
+  derivedFrom: string[];
+}
 
 export interface ModelColumn {
   /** Original JSON property name. */
@@ -49,6 +82,15 @@ export interface ModelEntity {
   ref?: string;
   description?: string;
   columns: ModelColumn[];
+  /**
+   * Physical columns of a composite primary key (associative/link tables).
+   * When set, DDL emits PRIMARY KEY (col1, col2) instead of a surrogate key.
+   */
+  compositePrimaryKey?: string[];
+  /** Multi-column indexes in addition to the per-column index rule. */
+  compositeIndexes?: CompositeIndexSpec[];
+  /** Present only when this entity is a derived many-to-many link table. */
+  junction?: JunctionMeta;
 }
 
 /** A column as reported by a live database (Phase C desktop integration). */
