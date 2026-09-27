@@ -2,7 +2,7 @@
 
 > Browser-safe relational modeling core for OpenAPI. Turn an OpenAPI document into entities, foreign keys, dialect-aware DDL, an ER graph, a table ↔ API impact index, and a versioned, AI-ready reconciliation artifact — with **pure functions only, zero runtime dependencies, and no React, DOM, filesystem, or network access**.
 
-Part of the [PowerDuck](https://www.powerduck.com/) toolkit.
+Part of the [Powerduck](https://www.powerduck.com/) toolkit.
 Website: **[powerduck.com](https://www.powerduck.com/)** · Docs: **[powerduck.com/docs/getting-started/introduction](https://www.powerduck.com/docs/getting-started/introduction)** · npm: **[@powerduck/datamodel](https://www.npmjs.com/package/@powerduck/datamodel)**
 
 ---
