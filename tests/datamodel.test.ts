@@ -257,7 +257,9 @@ test("alter scripts create missing tables and add or modify columns", () => {
 
   const partial = { name: "catalog_categories", columns: [{ name: "id", dataType: "bigint" }] };
   const added = buildAlterScript("sqlserver", category, partial, entities);
-  expect(added[0]).toContain("ADD COLUMN");
+  expect(added[0]).toContain("REVIEW ONLY");
+  expect(added[0]).toContain("ADD [name]");
+  expect(added[0]).not.toContain("ADD COLUMN");
 });
 
 test("sample data is deterministic and grounded in schema constraints", () => {

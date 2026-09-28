@@ -37,7 +37,7 @@ function isEmailColumn(column: ModelColumn): boolean {
 function indexKind(column: ModelColumn): IndexSpec["reason"] | null {
   if (column.primaryKey) return null;
   if (column.unique) return "unique";
-  if (isEmailColumn(column)) return "email";
+  // Email does not imply business uniqueness. Only explicit constraints do.
   if (column.refEntityId) return "foreign-key";
   return null;
 }

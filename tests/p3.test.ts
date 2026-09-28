@@ -63,11 +63,11 @@ const order = entity("schema:Order", "Order", "orders", [
 const entities = [order, customer];
 
 describe("indexes", () => {
-  test("indexes foreign keys and email columns, skips primary keys", () => {
+  test("indexes foreign keys without inferring email uniqueness", () => {
     const result = buildIndexes("mysql", entities);
     const names = result.indexes.map((index) => index.name);
     expect(names).toContain("idx_orders_customer_id");
-    expect(names).toContain("uq_customers_email");
+    expect(names).not.toContain("uq_customers_email");
     expect(names.some((name) => name.includes("_id_"))).toBe(false);
   });
 

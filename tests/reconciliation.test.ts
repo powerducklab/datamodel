@@ -105,7 +105,7 @@ describe("buildReconciliation — spec-only (forward engineering)", () => {
 });
 
 describe("buildReconciliation — live database", () => {
-  it("reports a fully matched, enforced schema with an empty plan", () => {
+  it("reports matched tables and review-only index proposals without catalog evidence", () => {
     const report = reconcile({
       liveTables: [liveCustomers(), liveOrders()],
       liveForeignKeys: [orderFk()],
@@ -126,7 +126,7 @@ describe("buildReconciliation — live database", () => {
     });
     expect(report.summary.enforcedRelationships).toBe(1);
     expect(report.summary.unenforcedRelationships).toBe(0);
-    expect(report.migrationPlan).toEqual([]);
+    expect(report.migrationPlan.every(step => step.requiresReview && step.sql.every(sql => sql.startsWith("-- REVIEW ONLY")))).toBe(true);
     expect(report.openQuestions).toEqual([]);
   });
 
@@ -148,7 +148,7 @@ describe("buildReconciliation — live database", () => {
     const alterSql = alter?.sql.join("\n") ?? "";
     expect(alterSql).toContain("ADD COLUMN");
     expect(alterSql).toMatch(/total/);
-    expect(alter?.requiresReview).toBe(false);
+    expect(alter?.requiresReview).toBe(true);
   });
 
   it("treats live-only tables as orphans requiring review", () => {
@@ -192,7 +192,7 @@ describe("buildReconciliation — determinism and robustness", () => {
     expect(report.summary.modeledTables).toBe(0);
     expect(report.tables).toEqual([]);
     expect(report.relationships).toEqual([]);
-    expect(report.migrationPlan).toEqual([]);
+    expect(report.migrationPlan.every(step => step.requiresReview && step.sql.every(sql => sql.startsWith("-- REVIEW ONLY")))).toBe(true);
   });
 
   it("handles nullish input without throwing", () => {

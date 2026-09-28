@@ -1,3 +1,5 @@
+import { DIALECTS } from "./dialects";
+import { buildIndexes } from "./indexes";
 import type {
   DialectId,
   LiveColumn,
@@ -172,6 +174,8 @@ export interface DataModelReconciliation {
 }
 
 export interface BuildReconciliationOptions {
+  /** Independently reviewed persistence model, when supplied. */
+  entities?: ModelEntity[];
   doc: unknown;
   dialectId?: DialectId;
   liveTables?: LiveTable[];
@@ -253,7 +257,7 @@ export function buildReconciliation(
   options: BuildReconciliationOptions,
 ): DataModelReconciliation {
   const dialectId: DialectId = options.dialectId ?? "mysql";
-  const entities: ModelEntity[] = extractEntities(options.doc);
+  const entities: ModelEntity[] = options.entities ?? extractEntities(options.doc);
   const hasLive = Array.isArray(options.liveTables);
   const liveTables = options.liveTables ?? [];
   const liveForeignKeys = options.liveForeignKeys ?? [];
@@ -394,7 +398,7 @@ export function buildReconciliation(
         options.overrides,
       ),
       blockedBy,
-      requiresReview: false,
+      requiresReview: true,
     });
   }
 
@@ -410,6 +414,39 @@ export function buildReconciliation(
       requiresReview: true,
     });
   }
+
+  const dialect = DIALECTS[dialectId];
+  const quotedTable = (name: string) => {
+    const live = findLiveTable(name);
+    return live?.schema ? `${dialect.quoteIdent(live.schema)}.${dialect.quoteIdent(live.name)}` : dialect.quoteIdent(name);
+  };
+  for (const relationship of graph.relationships) {
+    if (!hasLive || relationship.enforced || relationship.origin !== "model") continue;
+    // CREATE already includes constraints for newly created child tables.
+    if (!findLiveTable(relationship.fromTable)) continue;
+    migrationPlan.push({order: ++order, kind: "alter_table", target: relationship.fromTable,
+      description: "Review orphan rows and key compatibility before adding this foreign key.",
+      sql: [`-- REVIEW ONLY: validate existing rows before enforcing the relationship.\n-- ALTER TABLE ${quotedTable(relationship.fromTable)} ADD FOREIGN KEY (${dialect.quoteIdent(relationship.fromColumn)}) REFERENCES ${quotedTable(relationship.toTable)} (${dialect.quoteIdent(relationship.toColumn)})`],
+      blockedBy: [],requiresReview: true});
+  }
+  // Index catalogs are not available from the current bridge. Never claim these are absent.
+  const indexes = buildIndexes(dialectId,entities,options.overrides);
+  // Tables created in this plan already declare their indexes inline, so a
+  // separate CREATE INDEX would be redundant (or fail on a duplicate name).
+  const createdTableKeys = new Set(
+    migrationPlan
+      .filter((step) => step.kind === "create_table")
+      .map((step) => tableKey(step.target)),
+  );
+  indexes.statements.forEach((sql,i) => {
+    const index=indexes.indexes[i];
+    if (createdTableKeys.has(tableKey(index.table))) return;
+    const existing = hasLive && Boolean(findLiveTable(index.table));
+    migrationPlan.push({order: ++order,kind:"alter_table",target:index.table,
+      description: existing ? "Review index definitions; existing index metadata is not available." : `Create index on ${index.table}.`,
+      sql: existing ? [`-- REVIEW ONLY: verify existing indexes and duplicates.\n-- ${sql}`] : [sql],
+      blockedBy:[],requiresReview:existing});
+  });
 
   const openQuestions: OpenQuestion[] = [];
   if (!hasLive) {
