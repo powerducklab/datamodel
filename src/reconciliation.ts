@@ -38,7 +38,7 @@ import { buildImpactIndex, operationsForEntity } from "./impact";
  * and explicit open questions, so a model never has to guess table shapes,
  * relationships, impact scope or migration order.
  *
- * The artifact is read-only evidence. PowerDuck never executes DDL/DML.
+ * The artifact is read-only evidence. Powerduck never executes DDL/DML.
  */
 
 export const RECONCILIATION_SCHEMA_VERSION = "1.0.0";
@@ -190,7 +190,7 @@ export interface BuildReconciliationOptions {
 }
 
 const SAFEGUARDS: string[] = [
-  "PowerDuck generates SQL but never executes DDL or DML against a database.",
+  "Powerduck generates SQL but never executes DDL or DML against a database.",
   "The live database is treated as a superset: extra columns and tables are reported, never dropped.",
   "Proposed statements are additive (CREATE TABLE IF NOT EXISTS / ADD or MODIFY COLUMN); destructive changes are intentionally not generated.",
   "Review the migration and run it with an account you control.",

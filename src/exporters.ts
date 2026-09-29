@@ -280,7 +280,7 @@ export function exportReconciliationMarkdown(reconciliation: DataModelReconcilia
     "",
   );
   lines.push(
-    "> Facts are computed deterministically by `@powerduck/datamodel`. The companion `reconciliation.json` is the machine-readable source of truth. Review SQL before executing; PowerDuck never runs DDL/DML.",
+    "> Facts are computed deterministically by `@powerduck/datamodel`. The companion `reconciliation.json` is the machine-readable source of truth. Review SQL before executing; Powerduck never runs DDL/DML.",
     "",
   );
 
@@ -366,7 +366,7 @@ export function exportReconciliationMarkdown(reconciliation: DataModelReconcilia
 
   lines.push("---", "");
   lines.push(
-    "Learn more: [PowerDuck](https://www.powerduck.com/) · [Documentation](https://www.powerduck.com/docs/getting-started/introduction)",
+    "Learn more: [Powerduck](https://www.powerduck.com/) · [Documentation](https://www.powerduck.com/docs/getting-started/introduction)",
   );
 
   return lines.join("\n");

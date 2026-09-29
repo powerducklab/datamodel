@@ -1,6 +1,6 @@
 {
   "name": "@powerduck/datamodel",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Browser-safe relational modeling core for OpenAPI: extract entities and foreign keys from an OpenAPI document, derive many-to-many link tables with composite keys from array references, generate dialect-aware DDL/indexes/seed SQL, diff a model against a live database, reverse-engineer component schemas, and build a versioned, AI-ready ER reconciliation artifact (JSON + Markdown/Mermaid). Pure functions only; no React, DOM, filesystem or runtime dependencies.",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

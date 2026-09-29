@@ -3,7 +3,7 @@ import { defineConfig } from "tsup";
 /**
  * The package is a browser-safe pure core (no Node.js built-ins, no runtime
  * dependencies), so it targets ES2020 and ships CJS + ESM + declarations.
- * Both the PowerDuck desktop/web renderer and Node-based tools (CLI, MCP
+ * Both the Powerduck desktop/web renderer and Node-based tools (CLI, MCP
  * server) consume the same built output.
  */
 export default defineConfig({
