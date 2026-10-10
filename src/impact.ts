@@ -1,3 +1,4 @@
+import { operationEntries } from "@powerduck/openapi-parser/methods";
 import type { ModelEntity } from "./types";
 
 /**
@@ -13,7 +14,7 @@ import type { ModelEntity } from "./types";
  * index never guesses implicit relationships.
  */
 
-const HTTP_METHODS = ["get", "post", "put", "patch", "delete"];
+
 const MAX_TRAVERSAL_DEPTH = 32;
 const SCHEMA_REF_PREFIX = "#/components/schemas/";
 
@@ -121,8 +122,7 @@ export function buildImpactIndex(doc: unknown): ImpactIndex {
   for (const [path, pathItemRaw] of Object.entries(doc.paths)) {
     const pathItem = pathItemRaw;
     if (!isObj(pathItem)) continue;
-    for (const method of HTTP_METHODS) {
-      const operation = pathItem[method];
+    for (const [method, operation] of operationEntries(pathItem)) {
       if (!isObj(operation)) continue;
       const ref = `${method.toUpperCase()} ${path}`;
       operations.push(ref);

@@ -1,3 +1,4 @@
+import { operationEntries } from "@powerduck/openapi-parser/methods";
 import type { JsonCoreType, ModelColumn, ModelEntity } from "./types";
 import { operationEntityName, snakeCase, tableNameFor } from "./naming";
 import { augmentWithJunctions } from "./junctions";
@@ -16,7 +17,7 @@ const MAX_ENTITIES = 200;
 const MAX_COLUMNS = 200;
 const MAX_DEPTH = 8;
 
-const HTTP_METHODS = ["get", "post", "put", "patch", "delete"];
+
 const ENVELOPE_KEYS = new Set([
   "data",
   "results",
@@ -279,8 +280,7 @@ export function extractEntities(doc: unknown): ModelEntity[] {
   for (const path of Object.keys(paths).sort()) {
     const pathItem = paths[path];
     if (!isObj(pathItem)) continue;
-    for (const method of HTTP_METHODS) {
-      const operation = pathItem[method];
+    for (const [method, operation] of operationEntries(pathItem)) {
       if (!isObj(operation)) continue;
       const opRef = `${method.toUpperCase()} ${path}`;
 

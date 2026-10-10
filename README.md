@@ -1,6 +1,6 @@
 # @powerduck/datamodel
 
-> Browser-safe relational modeling core for OpenAPI. Turn an OpenAPI document into entities, foreign keys, dialect-aware DDL, an ER graph, a table ↔ API impact index, and a versioned, AI-ready reconciliation artifact — with **pure functions only, zero runtime dependencies, and no React, DOM, filesystem, or network access**.
+> Browser-safe relational modeling core for OpenAPI. Turn an OpenAPI document into entities, foreign keys, dialect-aware DDL, an ER graph, a table ↔ API impact index, and a versioned, AI-ready reconciliation artifact — with **pure functions only, a lightweight shared method registry, and no React, DOM, filesystem, or network access**.
 
 Part of the [Powerduck](https://www.powerduck.com/) toolkit.
 Website: **[powerduck.com](https://www.powerduck.com/)** · Docs: **[powerduck.com/docs/getting-started/introduction](https://www.powerduck.com/docs/getting-started/introduction)** · npm: **[@powerduck/datamodel](https://www.npmjs.com/package/@powerduck/datamodel)**
@@ -360,7 +360,7 @@ npm run check:dual  # loads both builds and asserts identical, functional export
 
 ## Design guarantees
 
-- **Zero runtime dependencies** — nothing is installed at runtime; the library is fully browser-safe and executes no I/O.
+- **Browser-safe method handling** — imports only the lightweight `@powerduck/openapi-parser/methods` entry; no parser execution or I/O is performed.
 - **Deterministic** — pure functions, injectable clock, stable ordering for CI diffing.
 - **Additive and non-destructive** — plans never drop columns or tables and never run SQL.
 - **Evidence-based** — foreign keys come from explicit references and link tables from explicit plural array references; nothing is inferred from a name alone, and unrelated schemas are never linked.
@@ -373,3 +373,7 @@ MIT © POWERDUCK LIMITED
 - Website: [https://www.powerduck.com/](https://www.powerduck.com/)
 - Documentation: [https://www.powerduck.com/docs/getting-started/introduction](https://www.powerduck.com/docs/getting-started/introduction)
 - npm packages: [https://www.npmjs.com/search?q=%40powerduck](https://www.npmjs.com/search?q=%40powerduck)
+
+### Extended HTTP methods
+
+HTTP operation discovery includes all nine fixed OpenAPI 3.2 methods (including `trace` and `query`) and custom verbs in `additionalOperations`, such as `PROPFIND`, `REPORT`, and `CUSTOM-VERB`. Shared method helpers come from `@powerduck/openapi-parser/methods`; path metadata is not interpreted as an operation. Custom verbs must be valid HTTP tokens. Use OpenAPI 3.2 when declaring QUERY or `additionalOperations`.
