@@ -1,5 +1,5 @@
 import type { DialectId, ModelColumn, ModelEntity } from "./types";
-import { DIALECTS, type Dialect } from "./dialects";
+import { DIALECTS, quoteSqlString, type Dialect } from "./dialects";
 import { topoOrderEntities, type TableNameOverrides, resolveTableName } from "./ddl";
 
 /**
@@ -13,10 +13,6 @@ export interface InsertResult {
   statements: string[];
   sql: string;
   rowCount: number;
-}
-
-function quoteStringLiteral(value: string): string {
-  return `'${value.replace(/'/g, "''")}'`;
 }
 
 function exampleString(column: ModelColumn, row: number): string {
@@ -40,7 +36,7 @@ function exampleString(column: ModelColumn, row: number): string {
  * Render one deterministic value as a raw SQL token (already quoted where the
  * type requires it).
  */
-function sqlLiteral(column: ModelColumn, row: number, total: number): string {
+function sqlLiteral(column: ModelColumn, row: number, total: number, dialect: DialectId): string {
   const explicit = column.example;
 
   if (column.refEntityId) {
@@ -71,11 +67,11 @@ function sqlLiteral(column: ModelColumn, row: number, total: number): string {
   }
 
   if (column.jsonType === "object") {
-    if (!column.nullable) return quoteStringLiteral("{}");
+    if (!column.nullable) return quoteSqlString("{}", dialect);
     return "NULL";
   }
   if (column.jsonType === "array") {
-    if (!column.nullable) return quoteStringLiteral("[]");
+    if (!column.nullable) return quoteSqlString("[]", dialect);
     return "NULL";
   }
 
@@ -84,7 +80,7 @@ function sqlLiteral(column: ModelColumn, row: number, total: number): string {
   if (column.maxLength && value.length > column.maxLength) {
     value = value.slice(0, Math.max(1, column.maxLength));
   }
-  return quoteStringLiteral(value);
+  return quoteSqlString(value, dialect);
 }
 
 function columnsForInsert(entity: ModelEntity): ModelColumn[] {
@@ -102,7 +98,7 @@ function insertStatement(
   const renderedRows: string[] = [];
   for (let row = 1; row <= rows; row += 1) {
     const values = columns
-      .map((column) => sqlLiteral(column, row, rows))
+      .map((column) => sqlLiteral(column, row, rows, dialect.id))
       .join(", ");
     renderedRows.push(`  (${values})`);
   }

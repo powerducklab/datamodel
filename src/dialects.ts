@@ -19,6 +19,12 @@ export interface Dialect {
   endStatement: string;
 }
 
+/** Escape literals for MySQL's default backslash-escape mode as well as quotes. */
+export function quoteSqlString(value: string, dialect: DialectId): string {
+  const text = dialect === "mysql" ? value.replace(/\\/g, "\\\\") : value;
+  return `'${text.replace(/'/g, "''")}'`;
+}
+
 const DEFAULT_STRING = 255;
 
 function enumLength(values: Array<string | number>): number {
@@ -51,7 +57,7 @@ const mysql: Dialect = {
       case "string": {
         if (column.enumValues?.length) {
           return `ENUM(${column.enumValues
-            .map((v) => `'${String(v).replace(/'/g, "''")}'`)
+            .map((v) => quoteSqlString(String(v), "mysql"))
             .join(", ")})`;
         }
         switch (column.format) {
